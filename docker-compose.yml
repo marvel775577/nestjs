@@ -1,0 +1,60 @@
+version: "3.5"
+
+services:
+
+  mongo:
+    image: mongo:latest
+    restart: always
+    env_file: .env
+    container_name: ${MONGO_HOST}
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    ports:
+      - "${MONGO_PORT}:${MONGO_PORT}"
+    volumes:
+      - ./mongo:/data/db
+    networks:
+      - crm
+
+  postgres:
+    image: postgres:latest
+    restart: always
+    env_file: .env
+    container_name: ${POSTGRES_HOST}
+    environment:
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    networks:
+      - crm
+
+  backend:
+    build: ./
+    image: node:15-alpine
+    working_dir: /app
+    restart: always
+    links:
+      - postgres:${POSTGRES_HOST}
+      - mongo:${MONGO_HOST}
+    depends_on:
+      - postgres
+      - mongo
+    ports:
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
+    volumes:
+      - ./:/app
+    expose:
+      - "${BACKEND_PORT}"
+    command: 'npm run start:dev'
+    env_file: .env
+    networks:
+      - crm
+
+networks:
+  crm:
+    driver: bridge
